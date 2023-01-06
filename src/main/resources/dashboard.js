@@ -108,6 +108,49 @@ const aggregatorDashboard = (p) => {
             p.text(this._text, this._x + this._border, this._y + this._border, this._w - 2 * this._border, this._h - 2 * this._border);
         }
     }
+    class Labels {
+        constructor(
+        //
+        _labels = [], _indexToRow = (i) => i, _indexToCol = (i) => i) {
+            this._labels = _labels;
+            this._indexToRow = _indexToRow;
+            this._indexToCol = _indexToCol;
+        }
+        static labels() {
+            return new Labels();
+        }
+        indexToRow(callback) {
+            this._indexToRow = callback;
+            return this;
+        }
+        indexToCol(callback) {
+            this._indexToCol = callback;
+            return this;
+        }
+        add(label) {
+            this._labels.push(label);
+            return this;
+        }
+        draw(p) {
+            this._labels.forEach((label) => label.draw(p));
+        }
+    }
+    class DataLabel extends Label {
+        constructor(
+        //
+        _label = label(), _hour = 0) {
+            super();
+            this._label = _label;
+            this._hour = _hour;
+        }
+        static hourLabel(hour) {
+            return new DataLabel();
+        }
+        draw(p) {
+            this.x(this._hour).y(-1).w(1).h(1);
+            super.draw(p);
+        }
+    }
     const label = () => Label.label();
     class Point {
         constructor(
@@ -291,9 +334,28 @@ const aggregatorDashboard = (p) => {
         }
     }
     const crossHair = () => CrossHair.crossHair();
+    let TimeLevel;
+    (function (TimeLevel) {
+        TimeLevel["day"] = "day";
+        TimeLevel["hour"] = "hour";
+        TimeLevel["minute"] = "minute";
+        TimeLevel["second"] = "second";
+        TimeLevel["subSecond"] = "subSecond";
+        TimeLevel["aggregation"] = "aggregation";
+    })(TimeLevel || (TimeLevel = {}));
+    class Aggregator {
+        constructor(
+        //
+        _id, _amount = 0, _epochTimeMs = 0, _epochLevel = TimeLevel.day) {
+            this._id = _id;
+            this._amount = _amount;
+            this._epochTimeMs = _epochTimeMs;
+            this._epochLevel = _epochLevel;
+        }
+    }
     const drawBackground = (p) => {
         const bgColor = p.color(10, 20, 35);
-        const gridColor = p.color(255, 255, 255, 50);
+        const gridColor = p.color(255, 255, 255, 200);
         p.background(bgColor);
         const xMax = 9;
         const yMax = p.round(p.max(12, p.windowHeight / grid.tickPixelWidth) / 2);
@@ -304,7 +366,7 @@ const aggregatorDashboard = (p) => {
                     .x(x * 2)
                     .y(y * 2)
                     .radius(radius)
-                    .weight(0.005)
+                    .weight(0.004)
                     .color(gridColor)
                     .draw(p);
             });
@@ -314,7 +376,7 @@ const aggregatorDashboard = (p) => {
                 point()
                     .x(x / 3 + 1 / 6)
                     .y(y / 3 + 1 / 6)
-                    .weight(0.015)
+                    .weight(0.008)
                     .color(gridColor)
                     .draw(p);
             });
@@ -322,15 +384,12 @@ const aggregatorDashboard = (p) => {
     };
     const drawDashboard = (p) => {
         const border = 0.075;
-        const dashboardBgColor = p.color(10, 20, 35);
         const boxAccent = p.color(219, 167, 158);
         const boxColor = p.color(200, 200, 200, 50);
         const boxColorValue = p.color(200, 200, 200, 25);
         const textColor = p.color(0, 203, 191);
-        // p.clear(0, 0, 0, 0);
-        // p.background(dashboardBgColor);
         label() //
-            .text('Merchant')
+            .text('Merchant Id')
             .x(0.2)
             .y(0.2)
             .w(1)
@@ -350,7 +409,7 @@ const aggregatorDashboard = (p) => {
             .bgColor(boxColorValue)
             .draw(p);
         label() //
-            .text('Payment')
+            .text('Payment Id')
             .x(2.8)
             .y(0.2)
             .w(1)
@@ -379,6 +438,7 @@ const aggregatorDashboard = (p) => {
             .bgColor(boxColor)
             .draw(p);
     };
+    const drawDays = (p) => { };
     p.setup = () => {
         console.log('dashboard - setup initialized, P5 is running');
         p.createCanvas(p.windowWidth, p.windowHeight);
@@ -387,6 +447,7 @@ const aggregatorDashboard = (p) => {
         p.clear(0, 0, 0, 0);
         drawBackground(p);
         drawDashboard(p);
+        drawDays(p);
     };
     p.windowResized = (event) => {
         console.log(`dashboard - window resized: ${event}`);

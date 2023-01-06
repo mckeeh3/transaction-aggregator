@@ -1,4 +1,8 @@
 const aggregatorDashboard = (p: p5) => {
+  let daysQueryResponse = [...Array(7).keys()].map((day) => {
+    interval().epochTime(epochTime());
+  });
+
   class Grid {
     private constructor(
       //
@@ -33,7 +37,7 @@ const aggregatorDashboard = (p: p5) => {
   let grid: Grid = Grid.resize(p);
 
   class Label {
-    private constructor(
+    constructor(
       //
       private _text: string = '',
       private _x: number = 0,
@@ -47,7 +51,7 @@ const aggregatorDashboard = (p: p5) => {
       private _grid: Grid = grid
     ) {}
 
-    static label() {
+    static label(): Label {
       return new Label();
     }
 
@@ -125,6 +129,88 @@ const aggregatorDashboard = (p: p5) => {
       p.textSize(this._h - 2 * this._border);
       p.textAlign(this._textAlign[0] as p5.HORIZ_ALIGN, this._textAlign[1] as p5.VERT_ALIGN);
       p.text(this._text, this._x + this._border, this._y + this._border, this._w - 2 * this._border, this._h - 2 * this._border);
+    }
+  }
+
+  class Labels {
+    private constructor(
+      //
+      private _x: number = 0,
+      private _y: number = 0,
+      private _w: number = 0,
+      private _h: number = 0,
+      private _cols: number = 0,
+      private _label: Label = label(),
+      private _payloads: Payload[] = []
+    ) {}
+
+    static labels() {
+      return new Labels();
+    }
+
+    addAll(payloads: Payload[]): Labels {
+      this._payloads.push(...payloads);
+      return this;
+    }
+
+    x(x: number): Labels {
+      this._x = x;
+      return this;
+    }
+
+    y(y: number): Labels {
+      this._y = y;
+      return this;
+    }
+
+    w(w: number): Labels {
+      this._w = w;
+      return this;
+    }
+
+    h(h: number): Labels {
+      this._h = h;
+      return this;
+    }
+
+    cols(cols: number): Labels {
+      this._cols = cols;
+      return this;
+    }
+
+    label(label: Label): Labels {
+      this._label = label;
+      return this;
+    }
+
+    draw(p: p5): void {
+      Array(this._payloads.length / this._cols).forEach((row) => {
+        Array(this._cols).forEach((col) => {
+          const payload = this._payloads[row * this._cols + col];
+          this._label.x(this._x + col);
+          this._label.y(this._y + row);
+          this._label.text(payload.amount.toLocaleString());
+          this._label.draw(p);
+        });
+      });
+    }
+  }
+
+  class DataLabel extends Label {
+    private constructor(
+      //
+      private _hour: number = 0
+    ) {
+      super();
+    }
+
+    static hourLabel(hour: number): DataLabel {
+      return new DataLabel();
+    }
+
+    draw(p: p5): void {
+      this.x(this._hour).y(-1).w(1).h(1);
+      super.draw(p);
     }
   }
 
@@ -344,9 +430,175 @@ const aggregatorDashboard = (p: p5) => {
 
   const crossHair = () => CrossHair.crossHair();
 
-  const drawBackground = (p: p5) => {
+  enum EpochLevel {
+    day = 'day',
+    hour = 'hour',
+    minute = 'minute',
+    second = 'second',
+    millisecond = 'millisecond',
+    subSecond = 'subSecond',
+    transactionEvent = 'transactionEvent',
+  }
+
+  class EpochTime {
+    protected constructor(
+      //
+      protected _value: number = 0,
+      protected _level: EpochLevel = EpochLevel.day
+    ) {}
+
+    static epochTime() {
+      return new EpochTime();
+    }
+
+    value(value: number): EpochTime {
+      this._value = value;
+      return this;
+    }
+    level(level: EpochLevel): EpochTime {
+      this._level = level;
+      return this;
+    }
+    toDay(): EpochTime {
+      return this.toMillisecond().fromMsTo(EpochLevel.day);
+    }
+    toHour(): EpochTime {
+      return this.toMillisecond().fromMsTo(EpochLevel.hour);
+    }
+    toMinute(): EpochTime {
+      return this.toMillisecond().fromMsTo(EpochLevel.minute);
+    }
+    toSecond(): EpochTime {
+      return this.toMillisecond().fromMsTo(EpochLevel.second);
+    }
+    toSubSecond(): EpochTime {
+      return this.toMillisecond().fromMsTo(EpochLevel.subSecond);
+    }
+    toTransactionEvent(): EpochTime {
+      return this.toMillisecond().fromMsTo(EpochLevel.transactionEvent);
+    }
+    private toMillisecond(): EpochTime {
+      switch (this._level) {
+        case EpochLevel.day:
+          return new EpochTime(this._value * 24 * 60 * 60 * 1000, EpochLevel.millisecond);
+        case EpochLevel.hour:
+          return new EpochTime(this._value * 60 * 60 * 1000, EpochLevel.millisecond);
+        case EpochLevel.minute:
+          return new EpochTime(this._value * 60 * 1000, EpochLevel.millisecond);
+        case EpochLevel.second:
+          return new EpochTime(this._value * 1000, EpochLevel.millisecond);
+        case EpochLevel.millisecond:
+          return this;
+        case EpochLevel.subSecond:
+          return new EpochTime(this._value / 1000, EpochLevel.millisecond);
+        case EpochLevel.transactionEvent:
+          return new EpochTime(this._value, EpochLevel.millisecond);
+      }
+    }
+    private fromMsTo(level: EpochLevel): EpochTime {
+      switch (level) {
+        case EpochLevel.day:
+          return new EpochTime(this._value / 24 / 60 / 60 / 1000, EpochLevel.day);
+        case EpochLevel.hour:
+          return new EpochTime(this._value / 60 / 60 / 1000, EpochLevel.hour);
+        case EpochLevel.minute:
+          return new EpochTime(this._value / 60 / 1000, EpochLevel.minute);
+        case EpochLevel.second:
+          return new EpochTime(this._value / 1000, EpochLevel.second);
+        case EpochLevel.millisecond:
+          return this;
+        case EpochLevel.subSecond:
+          const slice: number = EpochTime.timeToSlice(this._value, 20);
+          return new EpochTime(this._value * 1000 * 100 + slice, EpochLevel.subSecond);
+        case EpochLevel.transactionEvent:
+          return new EpochTime(this._value, EpochLevel.transactionEvent);
+      }
+    }
+    private static timeToSlice(time: number, slice: number): number {
+      const s = time.toLocaleString();
+      return EpochTime.cyrb53(s) % slice;
+    }
+    // https://github.com/bryc/code/blob/master/jshash/experimental/cyrb53.js
+    private static cyrb53(str: string, seed: number = 0): number {
+      let h1: number = 0xdeadbeef ^ seed;
+      let h2 = 0x41c6ce57 ^ seed;
+      for (let i = 0; i < str.length; i++) {
+        const ch = str.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+      }
+      h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+      h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+
+      return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+    }
+  }
+
+  const epochTime = () => EpochTime.epochTime();
+
+  class Payload {
+    private constructor(
+      //
+      private _merchantId: string = '',
+      private _payloadId: string = '',
+      private _amount: number = 0
+    ) {}
+
+    static payload() {
+      return new Payload();
+    }
+
+    merchantId(merchantId: string): Payload {
+      this._merchantId = merchantId;
+      return this;
+    }
+
+    payloadId(payloadId: string): Payload {
+      this._payloadId = payloadId;
+      return this;
+    }
+
+    amount(amount: number): Payload {
+      this._amount = amount;
+      return this;
+    }
+  }
+
+  const payload = () => Payload.payload();
+
+  class Interval {
+    private constructor(
+      //
+      private _id: string = '',
+      private _payload: Payload = Payload.payload(),
+      private _epochTime: EpochTime = EpochTime.epochTime()
+    ) {}
+
+    static interval() {
+      return new Interval('', payload(), epochTime());
+    }
+
+    id(id: string): Interval {
+      this._id = id;
+      return this;
+    }
+
+    amount(amount: number): Interval {
+      this._payload.amount(amount);
+      return this;
+    }
+
+    epochTime(epochTime: EpochTime): Interval {
+      this._epochTime = epochTime;
+      return this;
+    }
+  }
+
+  const interval = () => Interval.interval();
+
+  const drawBackgroundGrid = (p: p5) => {
     const bgColor = p.color(10, 20, 35);
-    const gridColor = p.color(255, 255, 255, 50);
+    const gridColor = p.color(255, 255, 255, 200);
 
     p.background(bgColor);
 
@@ -359,7 +611,7 @@ const aggregatorDashboard = (p: p5) => {
           .x(x * 2)
           .y(y * 2)
           .radius(radius)
-          .weight(0.005)
+          .weight(0.004)
           .color(gridColor)
           .draw(p);
       });
@@ -369,26 +621,22 @@ const aggregatorDashboard = (p: p5) => {
         point()
           .x(x / 3 + 1 / 6)
           .y(y / 3 + 1 / 6)
-          .weight(0.015)
+          .weight(0.008)
           .color(gridColor)
           .draw(p);
       });
     });
   };
 
-  const drawDashboard = (p: p5) => {
+  const drawMerchantAndPayment = (p: p5) => {
     const border = 0.075;
-    const dashboardBgColor = p.color(10, 20, 35);
     const boxAccent = p.color(219, 167, 158);
     const boxColor = p.color(200, 200, 200, 50);
     const boxColorValue = p.color(200, 200, 200, 25);
     const textColor = p.color(0, 203, 191);
 
-    // p.clear(0, 0, 0, 0);
-    // p.background(dashboardBgColor);
-
     label() //
-      .text('Merchant')
+      .text('Merchant Id')
       .x(0.2)
       .y(0.2)
       .w(1)
@@ -410,7 +658,7 @@ const aggregatorDashboard = (p: p5) => {
       .draw(p);
 
     label() //
-      .text('Payment')
+      .text('Payment Id')
       .x(2.8)
       .y(0.2)
       .w(1)
@@ -442,6 +690,8 @@ const aggregatorDashboard = (p: p5) => {
       .draw(p);
   };
 
+  const drawDays = (p: p5) => {};
+
   p.setup = () => {
     console.log('dashboard - setup initialized, P5 is running');
 
@@ -451,8 +701,9 @@ const aggregatorDashboard = (p: p5) => {
   p.draw = () => {
     p.clear(0, 0, 0, 0);
 
-    drawBackground(p);
-    drawDashboard(p);
+    drawBackgroundGrid(p);
+    drawMerchantAndPayment(p);
+    drawDays(p);
   };
 
   p.windowResized = (event) => {
@@ -465,6 +716,61 @@ const aggregatorDashboard = (p: p5) => {
   p.mouseClicked = (event: PointerEvent) => {
     console.log(`dashboard - mouse clicked: x:${event.x}, y:${event.y}`);
   };
+
+  class ToTime {
+    private constructor(
+      //
+      private _time: number
+    ) {}
+
+    static fromZero() {
+      return new ToTime(0);
+    }
+
+    static fromNow(): ToTime {
+      return new ToTime(Date.now());
+    }
+
+    static fromDay(day: number): ToTime {
+      return new ToTime(day * 24 * 60 * 60 * 1000);
+    }
+
+    static fromHour(hour: number): ToTime {
+      return new ToTime(hour * 60 * 60 * 1000);
+    }
+
+    static fromMinute(minute: number): ToTime {
+      return new ToTime(minute * 60 * 1000);
+    }
+
+    static fromSecond(second: number): ToTime {
+      return new ToTime(second * 1000);
+    }
+
+    static fromMillisecond(millisecond: number): ToTime {
+      return new ToTime(millisecond);
+    }
+
+    toDay(): number {
+      return this._time / (24 * 60 * 60 * 1000);
+    }
+
+    toHour(): number {
+      return this._time / (60 * 60 * 1000);
+    }
+
+    toMinute(): number {
+      return this._time / (60 * 1000);
+    }
+
+    toSecond(): number {
+      return this._time / 1000;
+    }
+
+    toMillisecond(): number {
+      return this._time;
+    }
+  }
 };
 
 new p5(aggregatorDashboard);
