@@ -90,7 +90,7 @@ public class PaymentEntity extends EventSourcedEntity<PaymentEntity.State> {
       return new State(PaymentKey.empty(), List.of(), List.of());
     }
 
-    public Payload payload() {
+    Payload payload() {
       var initial = new Payload(key.toPayloadKey(), 0.0);
       return plusDays.stream().map(p -> minusDayPayload(p)).reduce(initial, (p1, p2) -> p1.add(p2));
     }
@@ -103,19 +103,19 @@ public class PaymentEntity extends EventSourcedEntity<PaymentEntity.State> {
           : payload;
     }
 
-    public PaymentCreatedEvent eventsFor(CreatePaymentCommand command) {
+    PaymentCreatedEvent eventsFor(CreatePaymentCommand command) {
       return new PaymentCreatedEvent(
           command.key(),
           command.priorPaymentDays());
     }
 
-    public PaymentUpdatedEvent eventsFor(UpdatePaymentCommand command) {
+    PaymentUpdatedEvent eventsFor(UpdatePaymentCommand command) {
       return new PaymentUpdatedEvent(
           command.key(),
           command.payload());
     }
 
-    public NextPaymentCycleStartedEvent eventsFor(StartNextPaymentCycleCommand command) {
+    NextPaymentCycleStartedEvent eventsFor(StartNextPaymentCycleCommand command) {
       var priorMinusDays = minusDays.stream().filter(m -> notPlusDay(m)).toList();
       var priorPaymentDays = new ArrayList<Payload>(priorMinusDays);
       priorPaymentDays.addAll(this.plusDays);
@@ -124,21 +124,21 @@ public class PaymentEntity extends EventSourcedEntity<PaymentEntity.State> {
           priorPaymentDays);
     }
 
-    public State on(PaymentCreatedEvent event) {
+    State on(PaymentCreatedEvent event) {
       return new State(
           event.key,
           this.plusDays,
           event.priorPaymentDays());
     }
 
-    public State on(PaymentUpdatedEvent event) {
+    State on(PaymentUpdatedEvent event) {
       var filtered = plusDays.stream().filter(p -> !p.eqPayload(event.payload())).toList();
       var newPlusDays = new ArrayList<Payload>(filtered);
       newPlusDays.add(event.payload());
       return new State(key, newPlusDays, minusDays);
     }
 
-    public State on(NextPaymentCycleStartedEvent event) {
+    State on(NextPaymentCycleStartedEvent event) {
       return this;
     }
 

@@ -72,31 +72,31 @@ public class MerchantEntity extends EventSourcedEntity<MerchantEntity.State> {
   }
 
   public record State(MerchantKey key, int currentPaymentId) {
-    public static State empty() {
+    static State empty() {
       return new State(MerchantKey.empty(), 0);
     }
 
-    public MerchantCreatedEvent eventsFor(CreateMerchantCommand command) {
+    MerchantCreatedEvent eventsFor(CreateMerchantCommand command) {
       return new MerchantCreatedEvent(command.key());
     }
 
-    public DayUpdatedEvent eventsFor(UpdateDayCommand command) {
+    DayUpdatedEvent eventsFor(UpdateDayCommand command) {
       return new DayUpdatedEvent(toPaymentKey(currentPaymentId()), command.payload);
     }
 
-    public NextPaymentCycleStartedEvent eventsFor(StartNextPaymentCycleCommand command) {
+    NextPaymentCycleStartedEvent eventsFor(StartNextPaymentCycleCommand command) {
       return new NextPaymentCycleStartedEvent(toPaymentKey(currentPaymentId()), toPaymentKey(currentPaymentId() + 1));
     }
 
-    public State on(MerchantCreatedEvent event) {
+    State on(MerchantCreatedEvent event) {
       return new State(event.key(), 1);
     }
 
-    public State on(DayUpdatedEvent event) {
+    State on(DayUpdatedEvent event) {
       return this;
     }
 
-    public State on(NextPaymentCycleStartedEvent event) {
+    State on(NextPaymentCycleStartedEvent event) {
       return new State(key, currentPaymentId() + 1);
     }
 

@@ -46,18 +46,17 @@ public class IntervalEntity extends EventSourcedEntity<IntervalEntity.State> {
         .thenReply(__ -> "OK");
   }
 
-  public record State( //
-      String merchantId,
-      EpochTime epochTime,
+  public record State(
+      IntervalKey key,
       Payload payload,
       List<State> subIntervals,
       boolean hasChanged) {
 
     static State empty() {
-      return new State("", EpochTime.empty(), Payload.empty(), List.of(), false);
+      return new State(IntervalKey.empty(), Payload.empty(), List.of(), false);
     }
 
-    public List<?> eventsFor(UpdateSubIntervalCommand command) {
+    List<?> eventsFor(UpdateSubIntervalCommand command) {
       var events = new ArrayList<>();
       events.add(new SubIntervalUpdatedEvent(command.subInterval()));
       if (!hasChanged) {
@@ -68,11 +67,11 @@ public class IntervalEntity extends EventSourcedEntity<IntervalEntity.State> {
       return events;
     }
 
-    public CurrentStateReleasedEvent eventsFor(ReleaseCurrentStateCommand command) {
+    CurrentStateReleasedEvent eventsFor(ReleaseCurrentStateCommand command) {
       return new CurrentStateReleasedEvent(cloneWithoutSubIntervals(false));
     }
 
-    public List<State> updateSubIntervals(List<State> subIntervals, State subInterval) {
+    private List<State> updateSubIntervals(List<State> subIntervals, State subInterval) {
       if (subIntervals.isEmpty()) {
         return List.of(subInterval);
       }
@@ -83,15 +82,15 @@ public class IntervalEntity extends EventSourcedEntity<IntervalEntity.State> {
 
     private State updateInterval(State state, List<State> subIntervals) {
       var payload = subIntervals.stream().map(s -> s.payload).reduce(Payload.empty(), Payload::add);
-      return new State(this.merchantId, this.epochTime, payload, this.subIntervals, true);
+      return new State(this.key, payload, this.subIntervals, true);
     }
 
     private State cloneWithoutSubIntervals(boolean hasChanged) {
-      return new State(this.merchantId, this.epochTime, this.payload, List.of(), hasChanged);
+      return new State(this.key, this.payload, List.of(), hasChanged);
     }
 
     private boolean eqInterval(State s1, State s2) {
-      return s1.merchantId.equals(s2.merchantId) && s1.epochTime.equals(s2.epochTime);
+      return s1.key.equals(s2.key);
     }
   }
 
