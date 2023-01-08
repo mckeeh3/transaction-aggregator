@@ -13,6 +13,7 @@ import kalix.javasdk.eventsourcedentity.EventSourcedEntity;
 import kalix.javasdk.eventsourcedentity.EventSourcedEntityContext;
 import kalix.springsdk.annotations.EntityKey;
 import kalix.springsdk.annotations.EntityType;
+import kalix.springsdk.annotations.EventHandler;
 
 @EntityKey("intervalId")
 @EntityType("Interval")
@@ -46,6 +47,18 @@ public class IntervalEntity extends EventSourcedEntity<IntervalEntity.State> {
         .thenReply(__ -> "OK");
   }
 
+  @EventHandler
+  public State handle(SubIntervalUpdatedEvent event) {
+    log.info("EntityId: {}\nState: {}\nEvent: {}", entityId, currentState(), event);
+    return currentState().on(event);
+  }
+
+  @EventHandler
+  public State handle(IntervalUpdatedEvent event) {
+    log.info("EntityId: {}\nState: {}\nEvent: {}", entityId, currentState(), event);
+    return currentState().on(event);
+  }
+
   public record State(
       IntervalKey key,
       Payload payload,
@@ -58,12 +71,15 @@ public class IntervalEntity extends EventSourcedEntity<IntervalEntity.State> {
 
     List<?> eventsFor(UpdateSubIntervalCommand command) {
       var events = new ArrayList<>();
-      events.add(new SubIntervalUpdatedEvent(command.subInterval()));
+
       if (!hasChanged) {
-        var subIntervals = updateSubIntervals(this.subIntervals, command.subInterval());
-        var newState = updateInterval(this, subIntervals);
+        var subIntervals = updateSubIntervals(command.subInterval);
+        var newState = updateInterval(command.key, subIntervals);
         events.add(new IntervalUpdatedEvent(newState.cloneWithoutSubIntervals(true)));
       }
+
+      events.add(new SubIntervalUpdatedEvent(command.key, command.subInterval));
+
       return events;
     }
 
@@ -71,7 +87,16 @@ public class IntervalEntity extends EventSourcedEntity<IntervalEntity.State> {
       return new CurrentStateReleasedEvent(cloneWithoutSubIntervals(false));
     }
 
-    private List<State> updateSubIntervals(List<State> subIntervals, State subInterval) {
+    public State on(SubIntervalUpdatedEvent event) {
+      var updatedSubIntervals = updateSubIntervals(event.subInterval);
+      return updateInterval(event.key, updatedSubIntervals);
+    }
+
+    public State on(IntervalUpdatedEvent event) {
+      return updateInterval(event.interval.key, subIntervals);
+    }
+
+    private List<State> updateSubIntervals(State subInterval) {
       if (subIntervals.isEmpty()) {
         return List.of(subInterval);
       }
@@ -80,9 +105,10 @@ public class IntervalEntity extends EventSourcedEntity<IntervalEntity.State> {
       return updatedSubIntervals;
     }
 
-    private State updateInterval(State state, List<State> subIntervals) {
-      var payload = subIntervals.stream().map(s -> s.payload).reduce(Payload.empty(), Payload::add);
-      return new State(this.key, payload, this.subIntervals, true);
+    private State updateInterval(IntervalKey key, List<State> subIntervals) {
+      var initial = new Payload(key.toPayloadKey(), 0.0);
+      var payload = subIntervals.stream().map(s -> s.payload).reduce(initial, Payload::add);
+      return new State(key, payload, subIntervals, true);
     }
 
     private State cloneWithoutSubIntervals(boolean hasChanged) {
@@ -94,23 +120,13 @@ public class IntervalEntity extends EventSourcedEntity<IntervalEntity.State> {
     }
   }
 
-  public record UpdateSubIntervalCommand(IntervalEntity.State subInterval) {}
+  public record UpdateSubIntervalCommand(IntervalKey key, IntervalEntity.State subInterval) {}
 
-  public record ReleaseCurrentStateCommand(String merchantId, EpochTime epochTime) {}
+  public record ReleaseCurrentStateCommand(IntervalKey key) {}
 
   public record CurrentStateReleasedEvent(IntervalEntity.State interval) {}
 
-  public record SubIntervalUpdatedEvent(IntervalEntity.State subInterval) {}
+  public record SubIntervalUpdatedEvent(IntervalKey key, IntervalEntity.State subInterval) {}
 
   public record IntervalUpdatedEvent(IntervalEntity.State interval) {}
-
-  public record Payload(String paymentId, double amount) {
-    static Payload empty() {
-      return new Payload("", 0);
-    }
-
-    Payload add(Payload other) {
-      return new Payload(paymentId, amount + other.amount);
-    }
-  }
 }

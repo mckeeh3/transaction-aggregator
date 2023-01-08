@@ -6,7 +6,11 @@ public record MerchantKey(
     String accountFrom,
     String accountTo) {
 
-  public static MerchantKey empty() {
+  static MerchantKey empty() {
     return new MerchantKey("", "", "", "");
+  }
+
+  boolean isEmpty() {
+    return merchantId.isEmpty() && serviceCode.isEmpty() && accountFrom.isEmpty() && accountTo.isEmpty();
   }
 }

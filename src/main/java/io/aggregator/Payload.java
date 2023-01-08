@@ -1,6 +1,10 @@
 package io.aggregator;
 
 record Payload(PayloadKey key, double amount) {
+  static Payload empty() {
+    return new Payload(PayloadKey.empty(), 0.0);
+  }
+
   boolean eqPayload(Payload p) {
     return key.equals(p.key);
   }
