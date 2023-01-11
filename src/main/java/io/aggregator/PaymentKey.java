@@ -14,4 +14,8 @@ public record PaymentKey(String paymentId, MerchantKey merchantKey) {
         merchantKey.accountTo(),
         EpochTime.now().toDay());
   }
+
+  String entityId() {
+    return "%s_%s".formatted(paymentId, merchantKey.entityId());
+  }
 }

@@ -10,6 +10,10 @@ public record IntervalKey(MerchantKey merchantKey, String transactionId, EpochTi
     return merchantKey.isEmpty() && transactionId.isEmpty() && epochTime.isEmpty();
   }
 
+  String entityId() {
+    return "%s_%s_%s".formatted(merchantKey.entityId(), transactionId, epochTime.entityId());
+  }
+
   PayloadKey toPayloadKey() {
     return new PayloadKey(
         merchantKey.merchantId(),
