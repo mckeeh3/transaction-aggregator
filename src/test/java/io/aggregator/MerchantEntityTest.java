@@ -41,7 +41,7 @@ public class MerchantEntityTest {
     }
 
     {
-      var command = new MerchantEntity.UpdateDayCommand(payloadFor(0, 100.0));
+      var command = new MerchantEntity.UpdateDayCommand(merchantKey(), payloadFor(0, 100.0));
 
       var result = testKit.call(p -> p.updateDay(command));
       assertEquals("OK", result.getReply());
@@ -72,14 +72,14 @@ public class MerchantEntityTest {
     }
 
     {
-      var command = new MerchantEntity.UpdateDayCommand(payloadFor(0, 100.0));
+      var command = new MerchantEntity.UpdateDayCommand(merchantKey(), payloadFor(0, 100.0));
 
       var result = testKit.call(p -> p.updateDay(command));
       assertEquals("OK", result.getReply());
     }
 
     {
-      var command = new MerchantEntity.UpdateDayCommand(payloadFor(0, 200.0));
+      var command = new MerchantEntity.UpdateDayCommand(merchantKey(), payloadFor(0, 200.0));
 
       var result = testKit.call(p -> p.updateDay(command));
       assertEquals("OK", result.getReply());
@@ -102,22 +102,21 @@ public class MerchantEntityTest {
     var testKit = EventSourcedTestKit.of(MerchantEntity::new);
 
     {
-      var merchantKey = merchantKey();
-      var command = new MerchantEntity.CreateMerchantCommand(merchantKey);
+      var command = new MerchantEntity.CreateMerchantCommand(merchantKey());
 
       var result = testKit.call(p -> p.createMerchant(command));
       assertEquals("OK", result.getReply());
     }
 
     {
-      var command = new MerchantEntity.UpdateDayCommand(payloadFor(0, 100.0));
+      var command = new MerchantEntity.UpdateDayCommand(merchantKey(), payloadFor(0, 100.0));
 
       var result = testKit.call(p -> p.updateDay(command));
       assertEquals("OK", result.getReply());
     }
 
     {
-      var command = new MerchantEntity.UpdateDayCommand(payloadFor(1, 200.0));
+      var command = new MerchantEntity.UpdateDayCommand(merchantKey(), payloadFor(1, 200.0));
 
       var result = testKit.call(p -> p.updateDay(command));
       assertEquals("OK", result.getReply());
@@ -140,7 +139,7 @@ public class MerchantEntityTest {
     }
 
     {
-      var command = new MerchantEntity.UpdateDayCommand(payloadFor(2, 300.0));
+      var command = new MerchantEntity.UpdateDayCommand(merchantKey(), payloadFor(2, 300.0));
 
       var result = testKit.call(p -> p.updateDay(command));
       assertEquals("OK", result.getReply());

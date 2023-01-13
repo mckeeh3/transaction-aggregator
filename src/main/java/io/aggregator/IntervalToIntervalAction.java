@@ -46,8 +46,9 @@ public class IntervalToIntervalAction extends Action {
   }
 
   private Effect<String> callMerchantInterval(IntervalEntity.CurrentStateReleasedEvent event) {
-    var path = "/merchant/%s/update-day".formatted(event.interval().key().merchantKey().entityId());
-    var command = new MerchantEntity.UpdateDayCommand(event.interval().payload());
+    var merchantKey = event.interval().key().merchantKey();
+    var path = "/merchant/%s/update-day".formatted(merchantKey.entityId());
+    var command = new MerchantEntity.UpdateDayCommand(merchantKey, event.interval().payload());
     var returnType = String.class;
     var deferredCall = kalixClient.put(path, command, returnType);
 

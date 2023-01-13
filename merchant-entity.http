@@ -1,0 +1,7 @@
+@urlPrefix = http://localhost:9000
+@merchantId = merchant-1
+@entityId = merchant-1_service-code-1_account-from-1_account-to-1
+
+###
+
+GET {{urlPrefix}}/merchant/{{entityId}}
