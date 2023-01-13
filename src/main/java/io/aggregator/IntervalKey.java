@@ -14,6 +14,10 @@ public record IntervalKey(MerchantKey merchantKey, String transactionId, EpochTi
     return "%s_%s_%s".formatted(merchantKey.entityId(), transactionId, epochTime.entityId());
   }
 
+  IntervalKey toLevelUp() {
+    return new IntervalKey(merchantKey, "", epochTime.toLevelUp());
+  }
+
   PayloadKey toPayloadKey() {
     return new PayloadKey(
         merchantKey.merchantId(),

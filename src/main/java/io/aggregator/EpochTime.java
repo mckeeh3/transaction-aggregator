@@ -7,7 +7,7 @@ record EpochTime(long value, Level level) {
     minute("minute"),
     second("second"),
     millisecond("millisecond"),
-    stripedSecond("stripedSecond"),
+    subSecond("subSecond"),
     transaction("transaction");
 
     final String level;
@@ -18,7 +18,7 @@ record EpochTime(long value, Level level) {
   }
 
   static EpochTime empty() {
-    return new EpochTime(0, Level.day);
+    return new EpochTime(0, Level.millisecond);
   }
 
   boolean isEmpty() {
@@ -57,10 +57,10 @@ record EpochTime(long value, Level level) {
       return toMs().fromMsTo(Level.minute);
     case millisecond:
       return toMs().fromMsTo(Level.second);
-    case stripedSecond:
+    case subSecond:
       return toMs().fromMsTo(Level.second);
     case transaction:
-      return toMs().fromMsTo(Level.stripedSecond);
+      return toMs().fromMsTo(Level.subSecond);
     default:
       throw new RuntimeException("Unknown level: " + level);
     }
@@ -78,7 +78,7 @@ record EpochTime(long value, Level level) {
       return new EpochTime(value * 1000, Level.millisecond);
     case millisecond:
       return this;
-    case stripedSecond:
+    case subSecond:
       return new EpochTime(value / 100 * 1000, Level.millisecond);
     case transaction:
       return new EpochTime(value, Level.millisecond);
@@ -99,9 +99,9 @@ record EpochTime(long value, Level level) {
       return new EpochTime(value / 1000, Level.second);
     case millisecond:
       return new EpochTime(value, Level.millisecond);
-    case stripedSecond:
+    case subSecond:
       var hash = Math.abs((value + "").hashCode()) % 20;
-      return new EpochTime(value / 1000 * 100 + hash, Level.stripedSecond);
+      return new EpochTime(value / 1000 * 100 + hash, Level.subSecond);
     case transaction:
       return new EpochTime(value, Level.transaction);
     default:

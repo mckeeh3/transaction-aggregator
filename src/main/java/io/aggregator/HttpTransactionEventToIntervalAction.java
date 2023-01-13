@@ -29,9 +29,10 @@ public class HttpTransactionEventToIntervalAction extends Action {
   public Effect<String> updateSubInterval(@RequestBody UpdateSubIntervalCommand commandIn) {
     log.info("Command: {}", commandIn);
 
-    var path = "/interval/%s/update-sub-interval".formatted(commandIn.key().entityId());
+    var parentIntervalKey = commandIn.key().toLevelUp();
+    var path = "/interval/%s/update-sub-interval".formatted(parentIntervalKey.entityId());
     var commandOut = new IntervalEntity.UpdateSubIntervalCommand(
-        commandIn.key(),
+        parentIntervalKey,
         new IntervalEntity.State(commandIn.key, commandIn.payload, List.of(), false));
     var returnType = String.class;
     var deferredCall = kalixClient.put(path, commandOut, returnType);
@@ -43,7 +44,7 @@ public class HttpTransactionEventToIntervalAction extends Action {
   public Effect<UpdateSubIntervalCommand> releaseCurrentState() {
     log.info("Command: releaseCurrentState");
 
-    return effects().reply(new UpdateSubIntervalCommand(null, null));
+    return effects().reply(new UpdateSubIntervalCommand(IntervalKey.empty(), Payload.empty()));
   }
 
   public record UpdateSubIntervalCommand(IntervalKey key, Payload payload) {}

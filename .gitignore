@@ -2,6 +2,8 @@
 .project
 .settings
 .vscode
+.bloop
+.metals
 node_modules
 yarn.lock
 

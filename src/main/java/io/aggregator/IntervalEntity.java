@@ -41,7 +41,7 @@ public class IntervalEntity extends EventSourcedEntity<IntervalEntity.State> {
 
   @PutMapping("/{intervalId}/release-current-state")
   public Effect<String> releaseCurrentState(@RequestBody ReleaseCurrentStateCommand command) {
-    log.info("EntityId: {}\nState: {}\nReleaseCurrentStateCommand {}", entityId, currentState(), command);
+    log.info("EntityId: {}\nState: {}\nCommand: {}", entityId, currentState(), command);
     return effects()
         .emitEvent(currentState().eventsFor(command))
         .thenReply(__ -> "OK");
@@ -55,6 +55,12 @@ public class IntervalEntity extends EventSourcedEntity<IntervalEntity.State> {
 
   @EventHandler
   public State handle(IntervalUpdatedEvent event) {
+    log.info("EntityId: {}\nState: {}\nEvent: {}", entityId, currentState(), event);
+    return currentState().on(event);
+  }
+
+  @EventHandler
+  public State handle(CurrentStateReleasedEvent event) {
     log.info("EntityId: {}\nState: {}\nEvent: {}", entityId, currentState(), event);
     return currentState().on(event);
   }
@@ -75,7 +81,7 @@ public class IntervalEntity extends EventSourcedEntity<IntervalEntity.State> {
       if (!hasChanged) {
         var subIntervals = updateSubIntervals(command.subInterval);
         var newState = updateInterval(command.key, subIntervals);
-        events.add(new IntervalUpdatedEvent(newState.cloneWithoutSubIntervals(true)));
+        events.add(new IntervalUpdatedEvent(newState.cloneWithoutSubIntervals(command.key, true)));
       }
 
       events.add(new SubIntervalUpdatedEvent(command.key, command.subInterval));
@@ -84,7 +90,7 @@ public class IntervalEntity extends EventSourcedEntity<IntervalEntity.State> {
     }
 
     CurrentStateReleasedEvent eventsFor(ReleaseCurrentStateCommand command) {
-      return new CurrentStateReleasedEvent(cloneWithoutSubIntervals(false));
+      return new CurrentStateReleasedEvent(cloneWithoutSubIntervals(command.key, false));
     }
 
     public State on(SubIntervalUpdatedEvent event) {
@@ -94,6 +100,13 @@ public class IntervalEntity extends EventSourcedEntity<IntervalEntity.State> {
 
     public State on(IntervalUpdatedEvent event) {
       return updateInterval(event.interval.key, subIntervals);
+    }
+
+    public State on(CurrentStateReleasedEvent event) {
+      if (EpochTime.Level.millisecond.equals(key.epochTime().level())) {
+        log.info("MILLISECOND {}", key);
+      }
+      return new State(event.interval.key, payload, subIntervals, false);
     }
 
     private List<State> updateSubIntervals(State subInterval) {
@@ -107,12 +120,18 @@ public class IntervalEntity extends EventSourcedEntity<IntervalEntity.State> {
 
     private State updateInterval(IntervalKey key, List<State> subIntervals) {
       var initial = new Payload(key.toPayloadKey(), 0.0);
-      var payload = subIntervals.stream().map(s -> s.payload).reduce(initial, Payload::add);
+      var payload = subIntervals.stream().map(s -> s.payload).reduce(initial, (total, p) -> total.add(p));
+      if (EpochTime.Level.millisecond.equals(key.epochTime().level())) {
+        log.info("MILLISECOND {}", key);
+      }
       return new State(key, payload, subIntervals, true);
     }
 
-    private State cloneWithoutSubIntervals(boolean hasChanged) {
-      return new State(this.key, this.payload, List.of(), hasChanged);
+    private State cloneWithoutSubIntervals(IntervalKey key, boolean hasChanged) {
+      if (EpochTime.Level.millisecond.equals(key.epochTime().level())) {
+        log.info("MILLISECOND {}", key);
+      }
+      return new State(key, this.payload, List.of(), hasChanged);
     }
 
     private boolean eqInterval(State s1, State s2) {

@@ -15,7 +15,7 @@ import kalix.springsdk.annotations.EventHandler;
 
 @EntityKey("merchantId")
 @EntityType("Merchant")
-@RequestMapping("/merchant")
+@RequestMapping("/merchant/{merchantId}")
 public class MerchantEntity extends EventSourcedEntity<MerchantEntity.State> {
   private static final Logger log = LoggerFactory.getLogger(MerchantEntity.class);
   private final String entityId;
@@ -29,7 +29,7 @@ public class MerchantEntity extends EventSourcedEntity<MerchantEntity.State> {
     return State.empty();
   }
 
-  @PostMapping("/{merchantId}/create-merchant")
+  @PostMapping("/create-merchant")
   public Effect<String> createMerchant(@RequestBody CreateMerchantCommand command) {
     log.info("EntityId: {}\nState: {}\nCommand: {}", entityId, currentState(), "createMerchant");
     return effects()
@@ -37,7 +37,7 @@ public class MerchantEntity extends EventSourcedEntity<MerchantEntity.State> {
         .thenReply(__ -> "OK");
   }
 
-  @PutMapping("/{merchantId}/update-day")
+  @PutMapping("/update-day")
   public Effect<String> updateDay(@RequestBody UpdateDayCommand command) {
     log.info("EntityId: {}\nState: {}\nCommand: {}", entityId, currentState(), "updateDay");
     return effects()
@@ -45,7 +45,7 @@ public class MerchantEntity extends EventSourcedEntity<MerchantEntity.State> {
         .thenReply(__ -> "OK");
   }
 
-  @PutMapping("/{merchantId}/start-next-payment-cycle")
+  @PutMapping("/start-next-payment-cycle")
   public Effect<String> startNextPaymentCycle(@RequestBody StartNextPaymentCycleCommand command) {
     log.info("EntityId: {}\nState: {}\nCommand: {}", entityId, currentState(), "startNextPaymentCycle");
     return effects()

@@ -1,0 +1,47 @@
+@urlPrefix = http://localhost:9000
+@merchantId = merchant-1
+@serviceCode = service-code-1
+@accountFrom = account-from-1
+@accountTo = account-to-1
+@transactionId = transaction-1
+@epochTimeValue = 1673528426277
+@epochTimeLevel = transaction
+@amount = 100.0
+
+###
+
+PUT {{urlPrefix}}/http-transaction-event-to-interval/update-sub-interval
+Content-Type: application/json
+
+{
+  "key": {
+    "merchantKey": {
+      "merchantId": "{{merchantId}}",
+      "serviceCode": "{{serviceCode}}",
+      "accountFrom": "{{accountFrom}}",
+      "accountTo": "{{accountTo}}"
+    },
+    "transactionId": "{{transactionId}}",
+    "epochTime": {
+      "value": {{epochTimeValue}},
+      "level": "{{epochTimeLevel}}"
+    }
+  },
+  "payload": {
+    "key": {
+      "merchantId": "{{merchantId}}",
+      "serviceCode": "{{serviceCode}}",
+      "accountFrom": "{{accountFrom}}",
+      "accountTo": "{{accountTo}}",
+      "epochTime": {
+        "value": {{epochTimeValue}},
+        "level": "{{epochTimeLevel}}"
+      }
+    },
+    "amount": {{amount}}
+  }
+}
+
+### just for testing to get the structure of the request body
+
+GET {{urlPrefix}}/http-transaction-event-to-interval/release-current-state
