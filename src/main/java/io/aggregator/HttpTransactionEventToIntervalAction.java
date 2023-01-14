@@ -25,15 +25,36 @@ public class HttpTransactionEventToIntervalAction extends Action {
     this.kalixClient = kalixClient;
   }
 
-  @PutMapping("/update-sub-interval")
+  @PutMapping("/json-update-sub-interval")
   public Effect<String> updateSubInterval(@RequestBody UpdateSubIntervalCommand commandIn) {
     log.info("Command: {}", commandIn);
 
-    var parentIntervalKey = commandIn.key().toLevelUp();
-    var path = "/interval/%s/update-sub-interval".formatted(parentIntervalKey.entityId());
+    var subIntervalKey = commandIn.key();
+    var intervalKey = subIntervalKey.toLevelUp();
+    var path = "/interval/%s/update-sub-interval".formatted(intervalKey.toLevelUp().entityId());
     var commandOut = new IntervalEntity.UpdateSubIntervalCommand(
-        parentIntervalKey,
+        intervalKey,
         new IntervalEntity.State(commandIn.key, commandIn.payload, List.of(), false));
+    var returnType = String.class;
+    var deferredCall = kalixClient.put(path, commandOut, returnType);
+
+    return effects().forward(deferredCall);
+  }
+
+  @PutMapping("/simple-update-sub-interval")
+  public Effect<String> singleTransactionEvent(@RequestBody SingleTransactionEventCommand commandIn) {
+    log.info("Command: {}", commandIn);
+
+    var epochTime = EpochTime.now().toTransaction();
+    var merchantKey = new MerchantKey("merchant-1", "service-code-1", "account-from-1", "account-to-1");
+    var subIntervalKey = new IntervalKey(merchantKey, commandIn.transactionId, epochTime);
+    var intervalKey = subIntervalKey.toLevelUp();
+    var payloadKey = PayloadKey.from(merchantKey, epochTime);
+    var payload = new Payload(payloadKey, commandIn.amount);
+    var path = "/interval/%s/update-sub-interval".formatted(subIntervalKey.toLevelUp().entityId());
+    var commandOut = new IntervalEntity.UpdateSubIntervalCommand(
+        intervalKey,
+        new IntervalEntity.State(subIntervalKey, payload, List.of(), false));
     var returnType = String.class;
     var deferredCall = kalixClient.put(path, commandOut, returnType);
 
@@ -48,4 +69,6 @@ public class HttpTransactionEventToIntervalAction extends Action {
   }
 
   public record UpdateSubIntervalCommand(IntervalKey key, Payload payload) {}
+
+  public record SingleTransactionEventCommand(String transactionId, double amount) {}
 }

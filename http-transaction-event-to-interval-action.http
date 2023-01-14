@@ -10,7 +10,17 @@
 
 ###
 
-PUT {{urlPrefix}}/http-transaction-event-to-interval/update-sub-interval
+PUT {{urlPrefix}}/http-transaction-event-to-interval/simple-update-sub-interval
+Content-Type: application/json
+
+{
+  "transactionId": "{{transactionId}}",
+  "amount": {{amount}}
+}
+
+###
+
+PUT {{urlPrefix}}/http-transaction-event-to-interval/json-update-sub-interval
 Content-Type: application/json
 
 {

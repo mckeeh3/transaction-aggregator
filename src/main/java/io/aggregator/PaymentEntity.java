@@ -33,15 +33,18 @@ public class PaymentEntity extends EventSourcedEntity<PaymentEntity.State> {
     return State.empty();
   }
 
-  @PostMapping("/{paymentId}/create-payment")
+  @PostMapping("/{paymentId}/create")
   public Effect<String> createPayment(@RequestBody CreatePaymentCommand command) {
     log.info("EntityId: {}\nState: {}\nCommand: {}", entityId, currentState(), command);
+    if (!currentState().isEmpty()) {
+      return effects().reply("OK");
+    }
     return effects()
         .emitEvent(currentState().eventsFor(command))
         .thenReply(__ -> "OK");
   }
 
-  @PutMapping("/{paymentId}/update-payment")
+  @PutMapping("/{paymentId}/update")
   public Effect<String> updatePayment(@RequestBody UpdatePaymentCommand command) {
     log.info("EntityId: {}\nState: {}\nCommand: {}", entityId, currentState(), command);
     return effects()
@@ -58,7 +61,13 @@ public class PaymentEntity extends EventSourcedEntity<PaymentEntity.State> {
   }
 
   @GetMapping("/{paymentId}")
-  public Effect<Payload> getPayment() {
+  public Effect<State> getPayment() {
+    log.info("EntityId: {}\nState: {}\nCommand: {}", entityId, currentState(), "getPayment");
+    return effects().reply(currentState());
+  }
+
+  @GetMapping("/{paymentId}/payload")
+  public Effect<Payload> getPayload() {
     log.info("EntityId: {}\nState: {}\nCommand: {}", entityId, currentState(), "getPayment");
     return effects().reply(currentState().payload());
   }
@@ -90,6 +99,10 @@ public class PaymentEntity extends EventSourcedEntity<PaymentEntity.State> {
       return new State(PaymentKey.empty(), List.of(), List.of());
     }
 
+    boolean isEmpty() {
+      return key.isEmpty();
+    }
+
     Payload payload() {
       var initial = new Payload(key.toPayloadKey(), 0.0);
       return plusDays.stream().map(p -> minusDayPayload(p)).reduce(initial, (p1, p2) -> p1.add(p2));
@@ -104,31 +117,22 @@ public class PaymentEntity extends EventSourcedEntity<PaymentEntity.State> {
     }
 
     PaymentCreatedEvent eventsFor(CreatePaymentCommand command) {
-      return new PaymentCreatedEvent(
-          command.key(),
-          command.priorPaymentDays());
+      return new PaymentCreatedEvent(command.key(), command.priorPaymentDays());
     }
 
     PaymentUpdatedEvent eventsFor(UpdatePaymentCommand command) {
-      return new PaymentUpdatedEvent(
-          command.key(),
-          command.payload());
+      return new PaymentUpdatedEvent(command.key(), command.payload());
     }
 
     NextPaymentCycleStartedEvent eventsFor(StartNextPaymentCycleCommand command) {
       var priorMinusDays = minusDays.stream().filter(m -> notPlusDay(m)).toList();
       var priorPaymentDays = new ArrayList<Payload>(priorMinusDays);
       priorPaymentDays.addAll(this.plusDays);
-      return new NextPaymentCycleStartedEvent(
-          command.key(),
-          priorPaymentDays);
+      return new NextPaymentCycleStartedEvent(command.priorKey, command.nextKey, priorPaymentDays);
     }
 
     State on(PaymentCreatedEvent event) {
-      return new State(
-          event.key,
-          this.plusDays,
-          event.priorPaymentDays());
+      return new State(event.key, this.plusDays, event.priorPaymentDays());
     }
 
     State on(PaymentUpdatedEvent event) {
@@ -147,6 +151,10 @@ public class PaymentEntity extends EventSourcedEntity<PaymentEntity.State> {
     }
   }
 
+  static PaymentKey toPaymentKey(String paymentId, MerchantKey merchantKey) {
+    return new PaymentKey(paymentId, merchantKey);
+  }
+
   public record CreatePaymentCommand(PaymentKey key, List<Payload> priorPaymentDays) {}
 
   public record PaymentCreatedEvent(PaymentKey key, List<Payload> priorPaymentDays) {}
@@ -155,7 +163,7 @@ public class PaymentEntity extends EventSourcedEntity<PaymentEntity.State> {
 
   public record PaymentUpdatedEvent(PaymentKey key, Payload payload) {}
 
-  public record StartNextPaymentCycleCommand(PaymentKey key) {}
+  public record StartNextPaymentCycleCommand(PaymentKey priorKey, PaymentKey nextKey) {}
 
-  public record NextPaymentCycleStartedEvent(PaymentKey key, List<Payload> priorPaymentDays) {}
+  public record NextPaymentCycleStartedEvent(PaymentKey priorKey, PaymentKey nextKey, List<Payload> priorPaymentDays) {}
 }

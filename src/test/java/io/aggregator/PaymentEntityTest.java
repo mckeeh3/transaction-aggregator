@@ -152,7 +152,7 @@ public class PaymentEntityTest {
 
     {
       var payloads = List.of(payloadFor(1, 100.0), payloadFor(2, 200.0), payloadFor(3, 300.0));
-      var command = new PaymentEntity.CreatePaymentCommand(paymentKeyFor(0), payloads);
+      var command = new PaymentEntity.CreatePaymentCommand(paymentKeyFor(1), payloads);
 
       var result = testKit.call(p -> p.createPayment(command));
       assertEquals("OK", result.getReply());
@@ -160,7 +160,7 @@ public class PaymentEntityTest {
 
     {
       var updatePayload = payloadFor(3, 400.0);
-      var command = new PaymentEntity.UpdatePaymentCommand(paymentKeyFor(0), updatePayload);
+      var command = new PaymentEntity.UpdatePaymentCommand(paymentKeyFor(1), updatePayload);
 
       var result = testKit.call(p -> p.updatePayment(command));
       assertEquals("OK", result.getReply());
@@ -168,14 +168,14 @@ public class PaymentEntityTest {
 
     {
       var updatePayload = payloadFor(4, 500.0);
-      var command = new PaymentEntity.UpdatePaymentCommand(paymentKeyFor(0), updatePayload);
+      var command = new PaymentEntity.UpdatePaymentCommand(paymentKeyFor(1), updatePayload);
 
       var result = testKit.call(p -> p.updatePayment(command));
       assertEquals("OK", result.getReply());
     }
 
     {
-      var command = new PaymentEntity.StartNextPaymentCycleCommand(paymentKeyFor(0));
+      var command = new PaymentEntity.StartNextPaymentCycleCommand(paymentKeyFor(1), paymentKeyFor(0));
 
       var result = testKit.call(p -> p.startNextPaymentCycle(command));
       assertEquals("OK", result.getReply());
@@ -183,7 +183,8 @@ public class PaymentEntityTest {
       var events = result.getAllEvents();
       assertEquals(1, events.size());
       var event = result.getNextEventOfType(PaymentEntity.NextPaymentCycleStartedEvent.class);
-      assertEquals(paymentKeyFor(0), event.key());
+      assertEquals(paymentKeyFor(1), event.priorKey());
+      assertEquals(paymentKeyFor(0), event.nextKey());
 
       var expectedPayloads = List.of(payloadFor(1, 100.0), payloadFor(2, 200.0), payloadFor(3, 400.0), payloadFor(4, 500.0));
       assertEquals(expectedPayloads, event.priorPaymentDays());

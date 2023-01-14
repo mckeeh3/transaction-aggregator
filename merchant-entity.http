@@ -1,7 +1,24 @@
 @urlPrefix = http://localhost:9000
 @merchantId = merchant-1
+@serviceCode = service-code-1
+@accountFrom = account-from-1
+@accountTo = account-to-1
 @entityId = merchant-1_service-code-1_account-from-1_account-to-1
 
 ###
 
 GET {{urlPrefix}}/merchant/{{entityId}}
+
+###
+
+PUT {{urlPrefix}}/merchant/{{entityId}}/start-next-payment-cycle
+Content-Type: application/json
+
+{
+  "key": {
+    "merchantId": "{{merchantId}}",
+    "serviceCode": "{{serviceCode}}",
+    "accountFrom": "{{accountFrom}}",
+    "accountTo": "{{accountTo}}"
+  }
+}

@@ -87,21 +87,26 @@ public class MerchantEntity extends EventSourcedEntity<MerchantEntity.State> {
     }
 
     MerchantCreatedEvent eventFor(CreateMerchantCommand command) {
-      return new MerchantCreatedEvent(command.key());
+      var paymentKey = toPaymentKey(currentPaymentId, command.key);
+      return new MerchantCreatedEvent(command.key(), paymentKey);
     }
 
     List<?> eventsFor(UpdateDayCommand command) {
+      var paymentId = currentPaymentId == 0 ? 1 : currentPaymentId;
+      var paymentKey = toPaymentKey(paymentId, command.key);
       var events = new ArrayList<>();
       if (key.isEmpty()) {
-        events.add(new MerchantCreatedEvent(command.key()));
+        events.add(new MerchantCreatedEvent(command.key(), paymentKey));
       }
-      events.add(new DayUpdatedEvent(toPaymentKey(currentPaymentId()), command.payload));
+      events.add(new DayUpdatedEvent(paymentKey, command.payload));
 
       return events;
     }
 
     NextPaymentCycleStartedEvent eventFor(StartNextPaymentCycleCommand command) {
-      return new NextPaymentCycleStartedEvent(toPaymentKey(currentPaymentId()), toPaymentKey(currentPaymentId() + 1));
+      var priorKey = toPaymentKey(currentPaymentId, command.key);
+      var nextKey = toPaymentKey(currentPaymentId + 1, command.key);
+      return new NextPaymentCycleStartedEvent(priorKey, nextKey);
     }
 
     State on(MerchantCreatedEvent event) {
@@ -113,18 +118,18 @@ public class MerchantEntity extends EventSourcedEntity<MerchantEntity.State> {
     }
 
     State on(NextPaymentCycleStartedEvent event) {
-      return new State(key, currentPaymentId() + 1);
+      return new State(key, currentPaymentId + 1);
     }
 
-    private PaymentKey toPaymentKey(int paymentId) {
+    private PaymentKey toPaymentKey(int paymentId, MerchantKey key) {
       var paymentIdStr = "%s".formatted(paymentId);
-      return new PaymentKey(paymentIdStr, key);
+      return PaymentEntity.toPaymentKey(paymentIdStr, key);
     }
   }
 
   public record CreateMerchantCommand(MerchantKey key) {}
 
-  public record MerchantCreatedEvent(MerchantKey key) {}
+  public record MerchantCreatedEvent(MerchantKey key, PaymentKey paymentKey) {}
 
   public record UpdateDayCommand(MerchantKey key, Payload payload) {}
 

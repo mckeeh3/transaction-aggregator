@@ -121,16 +121,10 @@ public class IntervalEntity extends EventSourcedEntity<IntervalEntity.State> {
     private State updateInterval(IntervalKey key, List<State> subIntervals) {
       var initial = new Payload(key.toPayloadKey(), 0.0);
       var payload = subIntervals.stream().map(s -> s.payload).reduce(initial, (total, p) -> total.add(p));
-      if (EpochTime.Level.millisecond.equals(key.epochTime().level())) {
-        log.info("MILLISECOND {}", key);
-      }
       return new State(key, payload, subIntervals, true);
     }
 
     private State cloneWithoutSubIntervals(IntervalKey key, boolean hasChanged) {
-      if (EpochTime.Level.millisecond.equals(key.epochTime().level())) {
-        log.info("MILLISECOND {}", key);
-      }
       return new State(key, this.payload, List.of(), hasChanged);
     }
 
